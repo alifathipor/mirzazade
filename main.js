@@ -13,6 +13,7 @@ const state = {
   sizes: [],
   genders: [],
   tracker: null,
+  aiKeys: [], // List of AI Keys
   filters: {
     size: '',
     gender: '',
@@ -86,7 +87,14 @@ const els = {
   imagePreview: document.getElementById('image-preview'),
   aiEditBtn: document.getElementById('ai-edit-btn'),
   compressBtn: document.getElementById('compress-btn'),
-  aiApiKeyInput: document.getElementById('ai-api-key'), // New Input
+  
+  // AI Key Management Elements
+  aiApiKeyInput: document.getElementById('ai-api-key'),
+  saveApiKeyBtn: document.getElementById('save-api-key-btn'),
+  aiStatsContainer: document.getElementById('ai-stats-container'),
+  totalCreditsVal: document.getElementById('total-credits-val'),
+  creditsWarning: document.getElementById('credits-warning'),
+  aiKeysList: document.getElementById('ai-keys-list'),
 
   // Bulk Actions
   sizesBulkToolbar: document.getElementById('sizes-bulk-toolbar'),
@@ -96,6 +104,9 @@ const els = {
   gendersBulkToolbar: document.getElementById('genders-bulk-toolbar'),
   selectAllGenders: document.getElementById('select-all-genders'),
   deleteSelectedGendersBtn: document.getElementById('delete-selected-genders'),
+  
+  // Back to Top
+  backToTopBtn: document.getElementById('back-to-top'),
 };
 
 // --- UTILITIES ---
@@ -207,19 +218,36 @@ const navigateTo = (page) => {
   els.homePage.classList.add('hidden');
   els.loginPage.classList.add('hidden');
   els.adminDashboard.classList.add('hidden');
-  
-  if (page === 'home') els.homePage.classList.remove('hidden');
-  if (page === 'login') els.loginPage.classList.remove('hidden');
-  if (page === 'admin') {
-    if (!state.user) {
-      navigateTo('login');
-      return;
-    }
-    els.adminDashboard.classList.remove('hidden');
-    loadAdminData();
+
+  // Hide footer for login and admin
+  if (page === 'login' || page === 'admin') {
+      document.querySelector("footer").classList.add("hidden");
   }
+
+  // Show home page
+  if (page === 'home') {
+      els.homePage.classList.remove('hidden');
+      document.querySelector("footer").classList.remove("hidden"); // Show footer only in home
+  }
+
+  // Login
+  if (page === 'login') {
+      els.loginPage.classList.remove('hidden');
+  }
+
+  // Admin dashboard
+  if (page === 'admin') {
+      if (!state.user) {
+          navigateTo('login');
+          return;
+      }
+      els.adminDashboard.classList.remove('hidden');
+      loadAdminData();
+  }
+
   updateHeader();
 };
+
 
 const updateHeader = () => {
   if (state.user) {
@@ -405,15 +433,149 @@ const loadAdminData = async () => {
   state.adminPagination.searchId = '';
   if(els.adminSearchId) els.adminSearchId.value = '';
   
-  // Load API Key from LocalStorage
-  const savedKey = localStorage.getItem('mirza_ai_key');
-  if (savedKey) els.aiApiKeyInput.value = savedKey;
-
   renderAdminProducts();
   renderAdminSizes();
   renderAdminGenders();
   checkTracker();
+  fetchAiKeys(); // New: Fetch AI Keys
 };
+
+// --- AI KEY MANAGEMENT ---
+
+const fetchAiKeys = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('ai_keys')
+            .select('*')
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        state.aiKeys = data;
+        renderAiStats();
+    } catch (err) {
+        console.error("Error fetching AI keys:", err);
+    }
+};
+
+const renderAiStats = () => {
+    const keys = state.aiKeys;
+    let totalCredits = 0;
+    
+    els.aiKeysList.innerHTML = '';
+    
+    if (keys.length > 0) {
+        els.aiStatsContainer.classList.remove('hidden');
+        
+        keys.forEach(k => {
+            const remaining = k.remaining_credits !== undefined ? k.remaining_credits : (k.total_credits - k.used_credits);
+            totalCredits += remaining;
+            
+            // Mask Key: XXXX-XXXX-****-LAST4
+            const visibleStart = k.api_key.substring(0, 8);
+            const visibleEnd = k.api_key.substring(k.api_key.length - 4);
+            const masked = `${visibleStart}-****-${visibleEnd}`;
+            
+            const li = document.createElement('li');
+            li.className = 'ai-key-item';
+            li.innerHTML = `
+                <span class="key-mask">${masked}</span>
+                <span class="key-credits ${remaining < 5 ? 'low' : ''}">${remaining} اعتبار</span>
+            `;
+            els.aiKeysList.appendChild(li);
+        });
+        
+        els.totalCreditsVal.textContent = totalCredits;
+        
+        if (totalCredits < 10) {
+            els.creditsWarning.classList.remove('hidden');
+        } else {
+            els.creditsWarning.classList.add('hidden');
+        }
+        
+    } else {
+        els.aiStatsContainer.classList.add('hidden');
+    }
+};
+
+const handleSaveApiKey = async () => {
+    const key = els.aiApiKeyInput.value.trim();
+    if (!key) {
+        showNotification('لطفا کلید API را وارد کنید', 'error');
+        return;
+    }
+    
+    els.saveApiKeyBtn.disabled = true;
+    els.saveApiKeyBtn.innerHTML = '<div class="loading-spinner small-spinner"></div>';
+    
+    try {
+        const { error } = await supabase.from('ai_keys').insert({
+            api_key: key,
+            total_credits: 50,
+            used_credits: 0
+        });
+        
+        if (error) throw error;
+        
+        showNotification('کلید API ذخیره شد');
+        els.aiApiKeyInput.value = '';
+        await fetchAiKeys();
+        
+    } catch (err) {
+        console.error(err);
+        showNotification('خطا در ذخیره کلید', 'error');
+    } finally {
+        els.saveApiKeyBtn.disabled = false;
+        els.saveApiKeyBtn.innerHTML = '<i class="fa-solid fa-plus"></i> ثبت کلید';
+    }
+};
+
+// Helper to get a valid key
+const getValidApiKey = async () => {
+    // Refresh keys first to be sure
+    await fetchAiKeys();
+    
+    // Find first key with credits
+    const validKey = state.aiKeys.find(k => {
+        const remaining = k.remaining_credits !== undefined ? k.remaining_credits : (k.total_credits - k.used_credits);
+        return remaining > 0;
+    });
+    
+    if (validKey) {
+        // Cache for fast access
+        localStorage.setItem("mirza_active_ai_key", validKey.api_key);
+        return validKey;
+    }
+    
+    return null;
+};
+
+const updateKeyUsage = async (keyId, currentUsed) => {
+    try {
+        // Find the key in state to get total_credits
+        const keyObj = state.aiKeys.find(k => k.id === keyId);
+        const total = keyObj ? keyObj.total_credits : 50; // Fallback to 50 if not found
+        
+        const newUsed = currentUsed + 1;
+        
+        // Check if exhausted
+        if (newUsed >= total) {
+            // Delete key
+            await supabase.from('ai_keys').delete().eq('id', keyId);
+            showNotification('یک کلید API منقضی شد و حذف گردید', 'error');
+        } else {
+            // Update usage
+            await supabase.from('ai_keys').update({ used_credits: newUsed }).eq('id', keyId);
+        }
+        
+        // Refresh UI
+        fetchAiKeys();
+        
+    } catch (err) {
+        console.error("Error updating key usage:", err);
+    }
+};
+
 
 // --- ADMIN: PRODUCTS & AI UPLOAD ---
 
@@ -438,21 +600,16 @@ const handleAiEdit = async () => {
         return;
     }
 
-    // Get API Key from input or localStorage
-    let apiKey = els.aiApiKeyInput.value.trim();
-    if (!apiKey) {
-        apiKey = localStorage.getItem('mirza_ai_key');
-    }
-
-    if (!apiKey) {
-        showNotification('لطفا کلید API سرویس remove.bg را وارد کنید', 'error');
+    // 1. Get Valid Key
+    const keyObj = await getValidApiKey();
+    
+    if (!keyObj) {
+        showNotification('اعتبار کافی وجود ندارد. لطفا کلید API جدید وارد کنید.', 'error');
         els.aiApiKeyInput.focus();
         return;
     }
 
-    // Save key for future use
-    localStorage.setItem('mirza_ai_key', apiKey);
-
+    const apiKey = keyObj.api_key;
     const originalBtnText = els.aiEditBtn.innerHTML;
     els.aiEditBtn.innerHTML = '<div class="loading-spinner small-spinner"></div> در حال پردازش AI...';
     els.aiEditBtn.disabled = true;
@@ -462,7 +619,7 @@ const handleAiEdit = async () => {
         formData.append('image_file', state.uploadFile);
         formData.append('size', 'auto');
 
-        // Call remove.bg API
+        // 2. Call remove.bg API
         const response = await fetch('https://api.remove.bg/v1.0/removebg', {
             method: 'POST',
             headers: {
@@ -490,6 +647,10 @@ const handleAiEdit = async () => {
         
         showNotification('تصویر با هوش مصنوعی ویرایش شد!');
         els.compressBtn.disabled = false; // Enable compression
+        
+        // 3. Update Usage in DB
+        await updateKeyUsage(keyObj.id, keyObj.used_credits);
+        
     } catch (error) {
         console.error(error);
         showNotification('خطا در سرویس AI: ' + error.message, 'error');
@@ -955,9 +1116,23 @@ document.addEventListener('DOMContentLoaded', () => {
   els.addGenderBtn.addEventListener('click', addGender);
   els.updateTrackerBtn.addEventListener('click', updateTracker);
   
-  // Save API Key on change
-  els.aiApiKeyInput.addEventListener('change', (e) => {
-      localStorage.setItem('mirza_ai_key', e.target.value);
-      showNotification('کلید API ذخیره شد');
+  // AI Key Event Listener
+  els.saveApiKeyBtn.addEventListener('click', handleSaveApiKey);
+  
+  // Back to Top Logic
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 300) {
+        els.backToTopBtn.classList.add('visible');
+        els.backToTopBtn.classList.remove('hidden');
+    } else {
+        els.backToTopBtn.classList.remove('visible');
+    }
+  });
+
+  els.backToTopBtn.addEventListener('click', () => {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
   });
 });

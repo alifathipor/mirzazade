@@ -14,7 +14,7 @@
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=1.0.0" />
+    <link rel="stylesheet" href="style.css?v=1.4.0" />
   </head>
   <body>
     <!-- Header -->
@@ -180,10 +180,29 @@
             <div class="form-card">
               <h3>افزودن محصول جدید</h3>
               
-              <!-- API Key Configuration -->
+              <!-- AI Key Configuration -->
               <div class="api-config-box">
-                <label for="ai-api-key" class="text-small">کلید API حذف پس‌زمینه (Remove.bg):</label>
-                <input type="password" id="ai-api-key" placeholder="کلید API را اینجا وارد کنید..." />
+                <label for="ai-api-key" class="text-small">مدیریت کلیدهای API (Remove.bg):</label>
+                <div class="api-input-group">
+                    <input type="text" id="ai-api-key" placeholder="کلید API جدید را وارد کنید..." />
+                    <button id="save-api-key-btn" class="btn-primary btn-small">
+                        <i class="fa-solid fa-plus"></i> ثبت کلید
+                    </button>
+                </div>
+                
+                <!-- AI Stats Container -->
+                <div id="ai-stats-container" class="ai-stats-container hidden">
+                    <div class="ai-total-credits">
+                        <span>مجموع اعتبار باقی‌مانده:</span>
+                        <strong id="total-credits-val">0</strong>
+                    </div>
+                    <div id="credits-warning" class="credits-warning hidden">
+                        <i class="fa-solid fa-triangle-exclamation"></i> اعتبار شما رو به اتمام است!
+                    </div>
+                    <ul id="ai-keys-list" class="ai-keys-list">
+                        <!-- Dynamically populated -->
+                    </ul>
+                </div>
               </div>
 
               <form id="add-product-form">
@@ -322,19 +341,24 @@
     <footer>
       <div class="footer-content">
         <div class="footer-info">
-          <p class="footer-address"><i class="fa-solid fa-location-dot"></i> <strong>آدرس:</strong> تبریز، جاده آذرشهر، دنیای کفش میرزازاده</p>
+          <div class="footer-branches">
+            <p><i class="fa-solid fa-location-dot"></i> <strong>شعبه ۱:</strong> اتوبان تبریز آذرشهر نرسیده به پلیس‌راه، ورودی لاهیجان، دنیای کفش میرزازاده</p>
+            <p><i class="fa-solid fa-location-dot"></i> <strong>شعبه ۲:</strong> اتوبان تبریز آذرشهر، بعد از حوله هنر، جنب زیرگذر، دنیای کفش میرزازاده</p>
+          </div>
           <p class="footer-phone">
             <i class="fa-solid fa-phone"></i> 
             <strong>شماره تماس:</strong> 
-            <a href="tel:09023394942" class="phone-link">09023394942</a>
+            <a href="tel:09374394373" class="phone-link">09374394373</a>
           </p>
-        </div>
-        <div class="footer-copy">
-          &copy; 2025 فروشگاه میرزازاده. تمامی حقوق محفوظ است.
         </div>
       </div>
     </footer>
 
-    <script src="main.js?v=1.0.2"></script>
+    <!-- Back to Top Button -->
+    <button id="back-to-top" class="hidden" title="بازگشت به بالا">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+
+    <script src="main.js?v=1.4.0"></script>
   </body>
 </html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>فروشگاه دنیای کفش میرزازاده</title>
+    <meta name="description" content="فروشگاه کفش‌های تک‌سایز میرزازاده - تبریز" />
+    
+    <!-- Fonts: Vazirmatn -->
+    <link href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <!-- Icons: FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    
+    <link rel="stylesheet" href="style.css?v=1.0.0" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div class="header-content">
+        <div class="titles">
+          <h1>فروشگاه دنیای کفش میرزازاده</h1>
+          <p class="subtitle">کفش‌های تک‌سایز</p>
+        </div>
+        <div class="header-actions">
+          <button id="admin-login-btn" class="btn-secondary">ورود مدیر</button>
+          <button id="logout-btn" class="btn-danger hidden">خروج</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Notifications Container -->
+    <div id="notification-area"></div>
+
+    <!-- MAIN PAGE: Gallery & Filters -->
+    <main id="home-page">
+      <section class="filters-section">
+        <div class="filters-container">
+          <!-- Search Box -->
+          <div class="filter-group search-group">
+            <label for="search-id"><i class="fa-solid fa-magnifying-glass"></i> جستجو:</label>
+            <div class="input-wrapper">
+              <input type="number" id="search-id" placeholder="شناسه محصول..." />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label for="filter-size"><i class="fa-solid fa-ruler"></i> سایز:</label>
+            <div class="select-wrapper">
+              <select id="filter-size">
+                <option value="">همه سایزها</option>
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label for="filter-gender"><i class="fa-solid fa-user-group"></i> جنسیت:</label>
+            <div class="select-wrapper">
+              <select id="filter-gender">
+                <option value="">همه</option>
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Instructional Banner -->
+      <div class="instruction-banner">
+        <span class="instruction-text">جهت مشاهده تصویر بزرگتر روی محصول کلیک کنید</span>
+      </div>
+
+      <section class="gallery-section">
+        <div id="products-grid" class="grid">
+          <!-- Products will be injected here -->
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>در حال بارگذاری محصولات...</p>
+          </div>
+        </div>
+        
+        <!-- Infinite Scroll Loader -->
+        <div id="scroll-loader" class="scroll-loader hidden">
+          <div class="loading-spinner small-spinner"></div>
+          <span>در حال بارگذاری بیشتر...</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- IMAGE PREVIEW MODAL -->
+    <div id="image-modal" class="modal">
+        <div class="modal-overlay" id="modal-overlay"></div>
+        <div class="modal-content">
+            <button id="modal-close" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <img id="modal-image" src="" alt="پیش‌نمایش محصول" />
+            <div class="modal-actions">
+                <a id="modal-download" href="#" download="shoe-image.png" class="btn-primary" target="_blank">
+                    <i class="fa-solid fa-download"></i> دانلود تصویر
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN LOGIN PAGE -->
+    <main id="login-page" class="hidden">
+      <div class="login-wrapper">
+        <div class="login-card">
+          <div class="login-header">
+            <div class="login-icon">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h2>ورود به پنل مدیریت</h2>
+            <p>لطفا برای دسترسی وارد شوید</p>
+          </div>
+          <form id="login-form">
+            <div class="form-group">
+              <label>نام کاربری</label>
+              <div class="input-icon-wrapper">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" id="username" required placeholder="نام کاربری خود را وارد کنید" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>رمز عبور</label>
+              <div class="input-icon-wrapper">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="password" required placeholder="••••••" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary full-width login-btn">
+                ورود به سیستم <i class="fa-solid fa-arrow-left"></i>
+              </button>
+              <button type="button" id="back-to-home" class="btn-text full-width">بازگشت به فروشگاه</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <!-- ADMIN DASHBOARD -->
+    <main id="admin-dashboard" class="hidden">
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h2>پنل مدیریت</h2>
+          <p>مدیریت محصولات و تنظیمات فروشگاه</p>
+        </div>
+        <div id="tracker-status" class="tracker-box">
+          <div class="tracker-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <div class="tracker-info">
+            <span>وضعیت به‌روزرسانی</span>
+            <span id="tracker-text" class="tracker-value">...</span>
+            <span id="tracker-date" class="tracker-date-sub"></span>
+          </div>
+          <button id="update-tracker-btn" class="btn-small btn-outline">به‌روزرسانی</button>
+        </div>
+      </div>
+
+      <div class="admin-container">
+        <div class="admin-tabs">
+          <button class="tab-btn active" data-tab="tab-upload">
+            <span class="icon">＋</span> افزودن محصول
+          </button>
+          <button class="tab-btn" data-tab="tab-products">
+            <span class="icon">📦</span> مدیریت محصولات
+          </button>
+          <button class="tab-btn" data-tab="tab-sizes">
+            <span class="icon">📏</span> سایزها
+          </button>
+          <button class="tab-btn" data-tab="tab-genders">
+            <span class="icon">👥</span> جنسیت‌ها
+          </button>
+        </div>
+
+        <div class="tab-content">
+          <!-- Tab: Upload Product -->
+          <div id="tab-upload" class="tab-pane active">
+            <div class="form-card">
+              <h3>افزودن محصول جدید</h3>
+              
+              <!-- API Key Configuration -->
+              <div class="api-config-box">
+                <label for="ai-api-key" class="text-small">کلید API حذف پس‌زمینه (Remove.bg):</label>
+                <input type="password" id="ai-api-key" placeholder="کلید API را اینجا وارد کنید..." />
+              </div>
+
+              <form id="add-product-form">
+                <div class="form-row">
+                  <div class="form-group full">
+                    <label>تصویر کفش</label>
+                    <div class="file-input-wrapper">
+                      <input type="file" id="product-image" accept="image/*" required />
+                      <div class="file-cta">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>انتخاب تصویر</span>
+                      </div>
+                    </div>
+                    
+                    <!-- AI Edit Feature -->
+                    <div id="image-preview-container" class="hidden">
+                        <img id="image-preview" src="" alt="پیش‌نمایش" class="preview-img" />
+                        <div class="ai-actions">
+                            <button type="button" id="ai-edit-btn" class="btn-ai">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> ویرایش هوشمند (حذف پس‌زمینه)
+                            </button>
+                            <button type="button" id="compress-btn" class="btn-secondary full-width" disabled>
+                                <i class="fa-solid fa-compress"></i> فشرده‌سازی تصویر (بعد از AI)
+                            </button>
+                        </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>قیمت (تومان)</label>
+                    <input type="number" id="product-price" required placeholder="مثلا: 500000" />
+                  </div>
+                  <div class="form-group">
+                    <label>سایز</label>
+                    <div class="select-wrapper">
+                      <select id="product-size" required></select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>جنسیت</label>
+                    <div class="select-wrapper">
+                      <select id="product-gender" required></select>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button type="submit" class="btn-success large-btn">ثبت محصول</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Tab: Manage Products -->
+          <div id="tab-products" class="tab-pane">
+            <div class="table-card">
+              <div class="table-header">
+                <h3>لیست محصولات</h3>
+                <div class="admin-search-box">
+                    <input type="number" id="admin-search-id" placeholder="جستجو با شناسه..." />
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table id="products-table">
+                  <thead>
+                    <tr>
+                      <th>تصویر</th>
+                      <th>ID</th>
+                      <th class="col-price">قیمت (تومان)</th>
+                      <th>سایز</th>
+                      <th>جنسیت</th>
+                      <th>عملیات</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <div class="load-more-container">
+                  <button id="admin-load-more-btn" class="btn-secondary full-width hidden">نمایش بیشتر</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Manage Sizes -->
+          <div id="tab-sizes" class="tab-pane">
+            <div class="manage-card">
+              <h3>مدیریت سایزها</h3>
+              <div class="inline-form">
+                <input type="text" id="new-size-val" placeholder="سایز جدید را وارد کنید" />
+                <button id="add-size-btn" class="btn-primary">افزودن</button>
+              </div>
+              
+              <!-- Bulk Actions Toolbar -->
+              <div class="bulk-actions-toolbar hidden" id="sizes-bulk-toolbar">
+                <div class="bulk-info">
+                    <input type="checkbox" id="select-all-sizes" class="custom-checkbox">
+                    <label for="select-all-sizes">انتخاب همه</label>
+                </div>
+                <button id="delete-selected-sizes" class="btn-danger btn-small hidden">
+                    <i class="fa-solid fa-trash"></i> حذف انتخاب شده‌ها
+                </button>
+              </div>
+
+              <ul id="sizes-list" class="manage-list grid-list"></ul>
+            </div>
+          </div>
+
+          <!-- Tab: Manage Genders -->
+          <div id="tab-genders" class="tab-pane">
+            <div class="manage-card">
+              <h3>مدیریت جنسیت‌ها</h3>
+              <div class="inline-form">
+                <input type="text" id="new-gender-val" placeholder="جنسیت جدید را وارد کنید" />
+                <button id="add-gender-btn" class="btn-primary">افزودن</button>
+              </div>
+
+              <!-- Bulk Actions Toolbar -->
+              <div class="bulk-actions-toolbar hidden" id="genders-bulk-toolbar">
+                <div class="bulk-info">
+                    <input type="checkbox" id="select-all-genders" class="custom-checkbox">
+                    <label for="select-all-genders">انتخاب همه</label>
+                </div>
+                <button id="delete-selected-genders" class="btn-danger btn-small hidden">
+                    <i class="fa-solid fa-trash"></i> حذف انتخاب شده‌ها
+                </button>
+              </div>
+
+              <ul id="genders-list" class="manage-list grid-list"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-content">
+        <div class="footer-info">
+          <p class="footer-address"><i class="fa-solid fa-location-dot"></i> <strong>آدرس:</strong> تبریز، جاده آذرشهر، دنیای کفش میرزازاده</p>
+          <p class="footer-phone">
+            <i class="fa-solid fa-phone"></i> 
+            <strong>شماره تماس:</strong> 
+            <a href="tel:09023394942" class="phone-link">09023394942</a>
+          </p>
+        </div>
+        <div class="footer-copy">
+          &copy; 2025 فروشگاه میرزازاده. تمامی حقوق محفوظ است.
+        </div>
+      </div>
+    </footer>
+
+    <script src="main.js?v=1.0.2"></script>
+  </body>
+</html>
